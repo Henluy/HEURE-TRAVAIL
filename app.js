@@ -114,6 +114,48 @@ class HoursTracker {
                 this.switchView(view);
             });
         });
+
+        // Gestion améliorée des événements de la modale
+        const modal = document.getElementById('modal');
+// hoursInput is already declared above, no need to redeclare
+        const noteInput = document.getElementById('dayNote');
+
+        // Empêcher la fermeture lors du clic sur le contenu de la modale
+        modal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Validation du champ des heures
+        hoursInput.addEventListener('keypress', (e) => {
+            const char = String.fromCharCode(e.keyCode);
+            const value = e.target.value + char;
+            
+            // N'autoriser que les chiffres, le point et la virgule
+            if (!/^\d*[.,]?\d*$/.test(value)) {
+                e.preventDefault();
+            }
+            
+            // Sauvegarder avec Entrée
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.saveHours();
+            }
+        });
+
+        // Gérer Tab entre les champs
+        hoursInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                noteInput.focus();
+            }
+        });
+
+        noteInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab' && e.shiftKey) {
+                e.preventDefault();
+                hoursInput.focus();
+            }
+        });
         // Navigation mois
         document.getElementById('prevMonth').addEventListener('click', () => {
             this.currentDate.setMonth(this.currentDate.getMonth() - 1);
@@ -246,58 +288,105 @@ class HoursTracker {
         const currentHours = this.data[dateKey] || '';
         const currentNote = this.notes[dateKey] || '';
         
-        document.getElementById('selectedDate').textContent = this.formatDate(date);
-        document.getElementById('hoursInput').value = currentHours;
-        document.getElementById('dayNote').value = currentNote;
-        
         const modal = document.getElementById('modal');
+        const hoursInput = document.getElementById('hoursInput');
+        const noteInput = document.getElementById('dayNote');
+        
+        // Préparer les champs avant l'affichage
+        document.getElementById('selectedDate').textContent = this.formatDate(date);
+        hoursInput.value = currentHours;
+        noteInput.value = currentNote;
+        
+        // Réinitialiser les styles
+        modal.style.opacity = '1';
         modal.style.display = 'flex';
         
         // Animation d'ouverture
         requestAnimationFrame(() => {
             modal.classList.add('active');
+            
+            // Focus sur l'input avec délai pour l'animation
+            setTimeout(() => {
+                hoursInput.focus();
+                if (currentHours) {
+                    hoursInput.select();
+                }
+            }, 150);
         });
         
-        // Focus sur l'input avec délai pour l'animation
-        setTimeout(() => {
-            const input = document.getElementById('hoursInput');
-            input.focus();
-            input.select(); // Sélectionner le texte existant
-        }, 150);
+        // Gérer le focus et la sélection automatique
+        hoursInput.addEventListener('focus', function() {
+            this.select();
+        });
+        
+        // Validation en temps réel
+        hoursInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9.,]/g, '');
+            if (this.value.length > 0 && !this.value.match(/^\d*[.,]?\d*$/)) {
+                this.value = this.value.replace(/[^0-9.,]/g, '');
+            }
+        });
     }
 
     closeModal() {
         const modal = document.getElementById('modal');
-        modal.style.opacity = '0';
+        modal.classList.remove('active');
         
         setTimeout(() => {
             modal.style.display = 'none';
+            modal.style.opacity = '1';
             this.selectedDate = null;
-        }, 200);
+            // Réinitialiser les champs
+            document.getElementById('hoursInput').value = '';
+            document.getElementById('dayNote').value = '';
+        }, 300);
     }
 
     saveHours() {
         if (!this.selectedDate) return;
         
-        const inputValue = document.getElementById('hoursInput').value.replace(',', '.');
-        const hours = parseFloat(inputValue) || 0;
+        const inputValue = document.getElementById('hoursInput').value.trim().replace(',', '.');
+        const noteValue = document.getElementById('dayNote').value.trim();
         const dateKey = this.getDateKey(this.selectedDate);
         
-        // Validation des heures (max 24h par jour)
+        // Validation des heures
+        if (inputValue === '') {
+            this.showNotification('⚠️ Veuillez entrer un nombre d\'heures', 'warning');
+            return;
+        }
+        
+        const hours = parseFloat(inputValue);
+        if (isNaN(hours)) {
+            this.showNotification('⚠️ Valeur invalide', 'warning');
+            return;
+        }
+        
         if (hours > 24) {
             this.showNotification('⚠️ Maximum 24h par jour !', 'warning');
             return;
         }
         
+        if (hours < 0) {
+            this.showNotification('⚠️ Les heures ne peuvent pas être négatives', 'warning');
+            return;
+        }
+        
         if (hours > 0) {
             this.data[dateKey] = hours;
+            if (noteValue) {
+                this.notes[dateKey] = noteValue;
+            } else {
+                delete this.notes[dateKey];
+            }
             this.showNotification('✅ Heures sauvegardées !', 'success');
         } else {
             delete this.data[dateKey];
+            delete this.notes[dateKey];
             this.showNotification('🗑️ Heures supprimées !', 'info');
         }
         
         this.saveData();
+        this.saveNotes();
         this.renderCalendar();
         this.updateStats();
         this.closeModal();
@@ -308,9 +397,11 @@ class HoursTracker {
         
         const dateKey = this.getDateKey(this.selectedDate);
         
-        if (this.data[dateKey]) {
+        if (this.data[dateKey] || this.notes[dateKey]) {
             delete this.data[dateKey];
+            delete this.notes[dateKey];
             this.saveData();
+            this.saveNotes();
             this.renderCalendar();
             this.updateStats();
             this.showNotification('🗑️ Heures supprimées !', 'info');
