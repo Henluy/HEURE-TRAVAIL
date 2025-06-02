@@ -426,11 +426,18 @@ header h1 {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    justify-content: center;
+    align-items: center;
     z-index: 1000;
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal.active {
+    opacity: 1;
 }
 
 .modal.active {
@@ -448,18 +455,20 @@ header h1 {
 }
 
 .modal-content {
-    background: var(--glass-bg);
-    padding: 25px;
-    border-radius: var(--border-radius-lg);
+    background: var(--white);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    max-width: 90%;
+    width: 400px;
     position: relative;
-    width: 90%;
-    max-width: 400px;
-    transform: scale(0.9);
-    opacity: 0;
-    transition: var(--transition);
-    backdrop-filter: var(--blur);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-xl);
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-lg);
+}
+
+.modal.active .modal-content {
+    transform: translateY(0) scale(1);
 }
 
 @keyframes slideUp {
@@ -480,22 +489,52 @@ header h1 {
     font-weight: 600;
 }
 
-#hoursInput,
-.modal-content textarea {
+#hoursInput {
     width: 100%;
-    padding: 16px 20px;
-    border: 2px solid #e2e8f0;
+    padding: 15px;
+    margin: 20px 0;
+    border: 2px solid var(--gray);
     border-radius: var(--border-radius);
     font-size: 18px;
-    text-align: center;
-    margin-bottom: 20px;
-    transition: var(--transition);
-    background: var(--light);
+    background: var(--white);
+    color: var(--dark);
+    transition: all 0.2s ease;
+    outline: none;
 }
 
-.modal-content textarea {
-    resize: none;
+#hoursInput:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#hoursInput::placeholder {
+    color: var(--gray);
+    opacity: 0.7;
+}
+
+#dayNote {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 2px solid var(--gray);
+    border-radius: var(--border-radius);
+    resize: vertical;
     font-family: inherit;
+    background: var(--white);
+    color: var(--dark);
+    transition: all 0.2s ease;
+    outline: none;
+    min-height: 80px;
+}
+
+#dayNote:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#dayNote::placeholder {
+    color: var(--gray);
+    opacity: 0.7;
 }
 
 #hoursInput:focus {
