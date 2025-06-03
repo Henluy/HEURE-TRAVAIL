@@ -6,6 +6,7 @@ class HoursTracker {
         this.notes = this.loadNotes();
         this.theme = localStorage.getItem('theme') || 'light';
         this.currentView = 'calendar';
+        this.deferredPrompt = null; // Ajout pour PWA
         this.init();
     }
 
@@ -16,6 +17,8 @@ class HoursTracker {
         this.bindEvents();
         this.updateMonthDisplay();
         this.switchView(this.currentView);
+        this.setupPWA();
+        this.setupResetButton();
     }
 
     switchView(view) {
@@ -34,6 +37,11 @@ class HoursTracker {
         calendarSection.style.display = view === 'calendar' ? 'block' : 'none';
         statsSection.style.display = view === 'stats' ? 'block' : 'none';
         exportSection.style.display = view === 'export' ? 'block' : 'none';
+
+        // Mettre à jour les statistiques si on affiche la section stats
+        if (view === 'stats') {
+            this.updateDetailedStats();
+        }
     }
 
     createExportSection() {
@@ -165,6 +173,7 @@ class HoursTracker {
         hoursInput.addEventListener('focus', function() {
             this.select();
         });
+
         // Navigation mois
         document.getElementById('prevMonth').addEventListener('click', () => {
             this.currentDate.setMonth(this.currentDate.getMonth() - 1);
@@ -191,11 +200,6 @@ class HoursTracker {
                 document.getElementById('hoursInput').value = btn.dataset.hours;
                 this.animateButton(btn);
             });
-        });
-
-        // Remplacer les virgules par des points automatiquement
-        hoursInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(',', '.');
         });
 
         // Fermer modal en cliquant à côté
@@ -407,41 +411,52 @@ class HoursTracker {
     }
 
     updateStats() {
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth();
-        
-        let totalHours = 0;
-        let workDays = 0;
-        let maxHours = 0;
-        let minHours = 24;
-        
-        // Parcourir tous les jours du mois
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-            const dateKey = this.getDateKey(date);
-            const hours = this.data[dateKey] || 0;
-            
-            if (hours > 0) {
-                totalHours += hours;
-                workDays++;
-                maxHours = Math.max(maxHours, hours);
-                minHours = Math.min(minHours, hours);
-            }
-        }
-        
-        const avgHours = workDays > 0 ? totalHours / workDays : 0;
+        const stats = this.getMonthlyStats();
         
         // Animation des chiffres
-        this.animateNumber('monthTotal', totalHours);
-        this.animateNumber('workDays', workDays);
-        this.animateNumber('avgHours', avgHours);
+        this.animateNumber('monthTotal', stats.totalHours);
+        this.animateNumber('workDays', stats.workDays);
+        this.animateNumber('avgHours', stats.avgHours);
         
         // Mettre à jour les éléments
-        document.getElementById('monthTotal').textContent = this.formatHours(totalHours);
-        document.getElementById('workDays').textContent = workDays;
-        document.getElementById('avgHours').textContent = this.formatHours(avgHours);
+        document.getElementById('monthTotal').textContent = this.formatHours(stats.totalHours);
+        document.getElementById('workDays').textContent = stats.workDays;
+        document.getElementById('avgHours').textContent = this.formatHours(stats.avgHours);
+    }
+
+    updateDetailedStats() {
+        const stats = this.getMonthlyStats();
+        const statsSection = document.querySelector('.stats');
+        
+        // Mettre à jour ou créer la grille de statistiques détaillées
+        statsSection.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value" id="workDays">${stats.workDays}</span>
+                    <span class="stat-label">Jours travaillés</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="avgHours">${this.formatHours(stats.avgHours)}</span>
+                    <span class="stat-label">Moyenne/jour</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">${this.formatHours(stats.maxHours)}</span>
+                    <span class="stat-label">Maximum/jour</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">${this.formatHours(stats.minHours)}</span>
+                    <span class="stat-label">Minimum/jour</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">${this.formatHours(stats.weekdayHours)}</span>
+                    <span class="stat-label">Heures semaine</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">${this.formatHours(stats.weekendHours)}</span>
+                    <span class="stat-label">Heures weekend</span>
+                </div>
+            </div>
+        `;
     }
 
     updateMonthDisplay() {
@@ -452,6 +467,83 @@ class HoursTracker {
         
         const monthYear = `${monthNames[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
         document.getElementById('currentMonth').textContent = monthYear;
+    }
+
+    setupPWA() {
+        // Créer le bouton d'installation
+        const installButton = document.createElement('button');
+        installButton.id = 'installPWA';
+        installButton.className = 'install-button';
+        installButton.innerHTML = '📱 Installer l\'application';
+        installButton.style.display = 'none';
+        
+        // Vérifier si l'élément header existe avant d'ajouter le bouton
+        const header = document.querySelector('header');
+        if (header) {
+            header.appendChild(installButton);
+        }
+
+        // Gérer l'événement d'installation
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            installButton.style.display = 'block';
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (!this.deferredPrompt) return;
+            
+            this.deferredPrompt.prompt();
+            const { outcome } = await this.deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                this.showNotification('🎉 Application installée !', 'success');
+                installButton.style.display = 'none';
+            }
+            
+            this.deferredPrompt = null;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            this.showNotification('🎉 Application installée avec succès !', 'success');
+            installButton.style.display = 'none';
+            this.deferredPrompt = null;
+        });
+    }
+
+    setupResetButton() {
+        // Créer le bouton de réinitialisation
+        const resetButton = document.createElement('button');
+        resetButton.id = 'resetApp';
+        resetButton.className = 'reset-button';
+        resetButton.innerHTML = '🗑️ Réinitialiser l\'application';
+        
+        // Vérifier si l'élément bottom-nav existe avant d'ajouter le bouton
+        const bottomNav = document.querySelector('.bottom-nav');
+        if (bottomNav) {
+            bottomNav.appendChild(resetButton);
+        }
+
+        resetButton.addEventListener('click', () => {
+            if (confirm('⚠️ Êtes-vous sûr de vouloir réinitialiser l\'application ?\nToutes les données seront effacées définitivement.')) {
+                if (confirm('⚠️ Dernière confirmation : cette action est irréversible.\nVoulez-vous vraiment effacer toutes les données ?')) {
+                    // Effacer toutes les données
+                    localStorage.clear();
+                    this.data = {};
+                    this.notes = {};
+                    this.theme = 'light';
+                    
+                    // Réinitialiser l'interface
+                    this.applyTheme();
+                    this.renderCalendar();
+                    this.updateStats();
+                    this.showNotification('🗑️ Application réinitialisée !', 'info');
+                    
+                    // Recharger la page après un court délai
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }
+        });
     }
 
     // Fonctions utilitaires
@@ -508,6 +600,8 @@ class HoursTracker {
 
     animateNumber(elementId, targetValue) {
         const element = document.getElementById(elementId);
+        if (!element) return;
+        
         const currentValue = parseFloat(element.textContent) || 0;
         const increment = (targetValue - currentValue) / 20;
         let current = currentValue;
@@ -603,37 +697,7 @@ class HoursTracker {
         localStorage.setItem('dayNotes', JSON.stringify(this.notes));
     }
 
-    // Fonctions d'export (bonus)
-    exportData() {
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth() + 1;
-        const monthName = this.currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-        
-        let csvContent = `Date,Heures\n`;
-        
-        const daysInMonth = new Date(year, month, 0).getDate();
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month - 1, day);
-            const dateKey = this.getDateKey(date);
-            const hours = this.data[dateKey] || 0;
-            
-            if (hours > 0) {
-                csvContent += `${date.toLocaleDateString('fr-FR')},${hours}\n`;
-            }
-        }
-        
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `heures-${monthName.replace(' ', '-')}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        
-        this.showNotification('📊 Export réussi !', 'success');
-    }
-
-    // Fonction de statistiques avancées
+    // Fonctions de statistiques avancées
     getMonthlyStats() {
         const year = this.currentDate.getFullYear();
         const month = this.currentDate.getMonth();
@@ -697,23 +761,3 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
-
-// Gestion de l'installation PWA
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    
-    // Afficher un bouton d'installation personnalisé si souhaité
-    console.log('💾 PWA peut être installée');
-});
-
-window.addEventListener('appinstalled', () => {
-    console.log('🎉 PWA installée avec succès !');
-    deferredPrompt = null;
-});
-window.addEventListener('appinstalled', () => {
-    console.log('🎉 PWA installée avec succès !');
-    deferredPrompt = null;
-});
