@@ -588,11 +588,6 @@ class HoursTracker {
         dayDiv.addEventListener('click', () => this.openModal(date));
         dayDiv.style.cursor = 'pointer';
         
-        // Style différent pour les jours des autres mois
-        if (date.getMonth() !== currentMonth) {
-            dayDiv.style.opacity = '0.6';
-        }
-        
         return dayDiv;
     }
 
