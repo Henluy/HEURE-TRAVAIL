@@ -950,6 +950,11 @@ class HoursTracker {
                 day.style.transition = 'all 0.3s ease';
                 day.style.opacity = '1';
                 day.style.transform = 'translateY(0)';
+                
+                // S'assurer que l'opacity reste à 1 après l'animation
+                setTimeout(() => {
+                    day.style.opacity = '1';
+                }, 300);
             }, index * 20);
         });
     }
@@ -1573,9 +1578,4 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
             .then(registration => {
                 console.log('✅ Service Worker enregistré');
-            })
-            .catch(error => {
-                console.log('❌ Échec Service Worker:', error);
-            });
-    });
-}
+ 
