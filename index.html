@@ -15,12 +15,19 @@
 <body>
     <div class="app">
         <header>
-            <button id="themeToggle" class="theme-toggle" aria-label="Changer le thème">🌙</button>
+            <div class="header-top">
+                <button id="themeToggle" class="theme-toggle" aria-label="Changer le thème">🌙</button>
+                <select id="languageSelector" class="language-selector" aria-label="Choisir la langue">
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="it">🇮🇹 Italiano</option>
+                </select>
+            </div>
             <h1>⏰ Suivi Heures Pro</h1>
             <div class="month-nav">
-                <button id="prevMonth">‹</button>
+                <button id="prevMonth" aria-label="Mois précédent">‹</button>
                 <span id="currentMonth"></span>
-                <button id="nextMonth">›</button>
+                <button id="nextMonth" aria-label="Mois suivant">›</button>
             </div>
             <div class="total-hours">
                 Total du mois: <span id="monthTotal">0</span>h
@@ -73,21 +80,29 @@
         </nav>
 
         <!-- Modal pour saisie -->
-        <div id="modal" class="modal">
+        <div id="modal" class="modal" role="dialog" aria-labelledby="modal-title" aria-hidden="true">
             <div class="modal-content">
-                <h3>📝 Heures du <span id="selectedDate"></span></h3>
-                <input type="number" id="hoursInput" step="0.25" placeholder="Ex: 7.5">
-                <textarea id="dayNote" maxlength="200" placeholder="Note du jour (optionnel)" rows="2"></textarea>
+                <h3 id="modal-title">📝 Heures du <span id="selectedDate"></span></h3>
+                <div class="input-group">
+                    <label for="hoursInput" class="sr-only">Nombre d'heures</label>
+                    <input type="text" id="hoursInput" placeholder="Ex: 7.5" aria-describedby="hours-help">
+                    <div id="hours-help" class="input-help">Utilisez un point ou une virgule pour les décimales</div>
+                </div>
+                <div class="input-group">
+                    <label for="dayNote" class="sr-only">Note du jour</label>
+                    <textarea id="dayNote" maxlength="200" placeholder="Note du jour (optionnel)" rows="2"></textarea>
+                </div>
+                <div id="realTimeTotal" class="real-time-total"></div>
                 <div class="quick-buttons">
-                    <button class="quick-btn" data-hours="4">4h</button>
-                    <button class="quick-btn" data-hours="6">6h</button>
-                    <button class="quick-btn" data-hours="7">7h</button>
-                    <button class="quick-btn" data-hours="8">8h</button>
+                    <button class="quick-btn" data-hours="4" type="button">4h</button>
+                    <button class="quick-btn" data-hours="6" type="button">6h</button>
+                    <button class="quick-btn" data-hours="7" type="button">7h</button>
+                    <button class="quick-btn" data-hours="8" type="button">8h</button>
                 </div>
                 <div class="modal-actions">
-                    <button id="saveHours">💾 Sauver</button>
-                    <button id="deleteHours">🗑️ Supprimer</button>
-                    <button id="cancelModal">❌ Annuler</button>
+                    <button id="saveHours" type="button">💾 Sauver</button>
+                    <button id="deleteHours" type="button">🗑️ Supprimer</button>
+                    <button id="cancelModal" type="button">❌ Annuler</button>
                 </div>
             </div>
         </div>
