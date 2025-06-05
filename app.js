@@ -272,6 +272,7 @@ class HoursTracker {
         this.setupResetButton();
         this.setupLanguageSelector();
         this.setupResponsiveModal();
+        this.setupResponsiveHandlers();
         this.validateMonthlyTotal(); // Test de validation initial
     }
 
@@ -536,6 +537,19 @@ class HoursTracker {
 
         // Animation d'apparition du calendrier
         this.animateCalendar();
+        
+        // Optimisation responsive après le rendu
+        setTimeout(() => {
+            // Appliquer les optimisations responsives
+            if (typeof this.optimizeCalendarForScreen === 'function') {
+                this.optimizeCalendarForScreen();
+            }
+            
+            // Forcer une mise à jour du gestionnaire responsive si disponible
+            if (this.responsiveHandler && typeof this.responsiveHandler.forceUpdate === 'function') {
+                this.responsiveHandler.forceUpdate();
+            }
+        }, 50);
     }
 
     createDayElement(date, currentMonth) {
@@ -1431,6 +1445,120 @@ class HoursTracker {
         if (stats.workDays === 0) stats.minHours = 0;
         
         return stats;
+    }
+
+    // Configuration des gestionnaires de responsivité
+    setupResponsiveHandlers() {
+        // Vérifier si le gestionnaire de responsivité est disponible
+        if (typeof window.responsiveHandler !== 'undefined') {
+            // Intégrer avec le gestionnaire de responsivité
+            this.responsiveHandler = window.responsiveHandler;
+            
+            // Ajouter des écouteurs personnalisés pour l'application
+            window.addEventListener('resize', () => {
+                // Forcer la mise à jour du calendrier après redimensionnement
+                setTimeout(() => {
+                    this.optimizeCalendarForScreen();
+                }, 200);
+            });
+            
+            // Optimisation initiale
+            this.optimizeCalendarForScreen();
+        }
+        
+        // Gestionnaire de redimensionnement pour la modal
+        this.setupModalResponsive();
+        
+        // Optimisation pour les écrans tactiles
+        this.setupTouchOptimizations();
+    }
+
+    // Optimiser le calendrier selon la taille de l'écran
+    optimizeCalendarForScreen() {
+        const calendar = document.getElementById('calendar');
+        const calendarContainer = document.querySelector('.calendar-container');
+        
+        if (!calendar || !calendarContainer) return;
+        
+        const screenInfo = this.responsiveHandler ? this.responsiveHandler.getScreenInfo() : {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            isSmall: window.innerWidth < 480,
+            isVerySmall: window.innerWidth < 360,
+            isShort: window.innerHeight < 600
+        };
+        
+        // Ajuster les classes CSS selon la taille d'écran
+        calendar.classList.toggle('compact-mode', screenInfo.isSmall);
+        calendar.classList.toggle('minimal-mode', screenInfo.isVerySmall);
+        calendar.classList.toggle('short-screen', screenInfo.isShort);
+        
+        // Ajuster la taille des polices dynamiquement
+        if (screenInfo.isVerySmall) {
+            document.documentElement.style.setProperty('--dynamic-font-scale', '0.8');
+        } else if (screenInfo.isSmall) {
+            document.documentElement.style.setProperty('--dynamic-font-scale', '0.9');
+        } else {
+            document.documentElement.style.setProperty('--dynamic-font-scale', '1');
+        }
+    }
+
+    // Configuration responsive pour la modal
+    setupModalResponsive() {
+        const modal = document.getElementById('modal');
+        if (!modal) return;
+        
+        // Observer les changements de taille de la modal
+        if ('ResizeObserver' in window) {
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const { height } = entry.contentRect;
+                    const viewportHeight = window.innerHeight;
+                    
+                    // Ajuster la position si la modal est trop haute
+                    if (height > viewportHeight * 0.8) {
+                        modal.style.alignItems = 'flex-start';
+                        modal.style.paddingTop = '10px';
+                    }
+                }
+            });
+            
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                resizeObserver.observe(modalContent);
+            }
+        }
+    }
+
+    // Optimisations pour les écrans tactiles
+    setupTouchOptimizations() {
+        // Détecter si c'est un appareil tactile
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        if (isTouchDevice) {
+            document.body.classList.add('touch-device');
+            
+            // Améliorer la zone de toucher pour les petits éléments
+            const calendarDays = document.querySelectorAll('.calendar-day');
+            calendarDays.forEach(day => {
+                day.style.minHeight = Math.max(44, parseInt(getComputedStyle(day).minHeight)) + 'px';
+            });
+            
+            // Optimiser les boutons de navigation
+            const navButtons = document.querySelectorAll('.month-nav button');
+            navButtons.forEach(button => {
+                button.style.minWidth = '44px';
+                button.style.minHeight = '44px';
+            });
+        }
+    }
+
+    // Méthode pour forcer une mise à jour responsive
+    forceResponsiveUpdate() {
+        if (this.responsiveHandler) {
+            this.responsiveHandler.forceUpdate();
+        }
+        this.optimizeCalendarForScreen();
     }
 }
 
