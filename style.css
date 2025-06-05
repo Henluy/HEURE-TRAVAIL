@@ -809,60 +809,559 @@ header h1 {
     transform: translateY(-1px);
 }
 
-/* Responsive amélioré */
+/* Responsive Design Complet */
+
+/* Variables pour les tailles adaptatives */
+:root {
+    --calendar-gap: clamp(4px, 1vw, 8px);
+    --calendar-day-size: calc((100vw - 80px - (var(--calendar-gap) * 6)) / 7);
+    --calendar-day-max-size: min(var(--calendar-day-size), 60px);
+    --header-padding: clamp(15px, 4vw, 30px);
+    --container-padding: clamp(10px, 3vw, 20px);
+}
+
+/* App container responsive */
+.app {
+    max-width: min(420px, 100vw);
+    width: 100%;
+    margin: 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh; /* Support pour les navigateurs modernes */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header responsive */
+header {
+    padding: var(--header-padding) var(--container-padding) calc(var(--header-padding) * 0.8);
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-size: clamp(20px, 5vw, 24px);
+    margin-bottom: clamp(15px, 4vw, 20px);
+}
+
+.month-nav span {
+    font-size: clamp(16px, 4vw, 18px);
+}
+
+.total-hours {
+    font-size: clamp(14px, 3.5vw, 16px);
+    padding: clamp(12px, 3vw, 15px) clamp(15px, 4vw, 20px);
+}
+
+.total-hours span {
+    font-size: clamp(20px, 5vw, 24px);
+}
+
+/* Main content responsive */
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 80px;
+}
+
+/* Calendar container responsive */
+.calendar-container {
+    padding: var(--container-padding);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Important pour flexbox */
+}
+
+/* Calendar header responsive */
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--calendar-gap);
+    margin-bottom: clamp(8px, 2vw, 10px);
+    flex-shrink: 0;
+}
+
+.calendar-header-day {
+    padding: clamp(8px, 2vw, 12px) clamp(2px, 1vw, 4px);
+    font-size: clamp(10px, 2.5vw, 12px);
+    text-align: center;
+}
+
+/* Calendar grid responsive */
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--calendar-gap);
+    flex: 1;
+    align-content: start;
+    max-height: calc(100vh - 300px); /* Éviter le débordement */
+    max-height: calc(100dvh - 300px);
+}
+
+/* Calendar days responsive */
+.calendar-day {
+    aspect-ratio: 1;
+    min-height: clamp(45px, 12vw, 70px);
+    max-height: 70px;
+    padding: clamp(4px, 1.5vw, 8px);
+    border-radius: clamp(8px, 2vw, 12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--blur);
+    font-size: clamp(12px, 3vw, 16px);
+}
+
+.day-number {
+    font-size: clamp(12px, 3.5vw, 16px);
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+    line-height: 1;
+}
+
+.day-hours {
+    font-size: clamp(9px, 2.5vw, 11px);
+    margin-top: clamp(2px, 0.5vw, 4px);
+    opacity: 0.9;
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+    line-height: 1;
+}
+
+/* Stats responsive */
+.stats {
+    padding: var(--container-padding);
+    flex-shrink: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: clamp(12px, 3vw, 20px);
+    margin-top: clamp(8px, 2vw, 10px);
+}
+
+.stat-item {
+    padding: clamp(15px, 4vw, 20px);
+    border-radius: clamp(8px, 2vw, 12px);
+}
+
+.stat-value {
+    font-size: clamp(20px, 6vw, 32px);
+    margin-bottom: clamp(4px, 1vw, 8px);
+}
+
+.stat-label {
+    font-size: clamp(11px, 2.5vw, 14px);
+}
+
+/* Modal responsive */
+.modal {
+    padding: clamp(10px, 3vw, 20px);
+}
+
+.modal-content {
+    width: min(90vw, 400px);
+    max-height: min(80vh, 80dvh);
+    padding: clamp(20px, 5vw, 30px);
+    border-radius: clamp(15px, 4vw, 20px);
+}
+
+.modal-content h3 {
+    font-size: clamp(16px, 4vw, 18px);
+    margin-bottom: clamp(15px, 4vw, 20px);
+}
+
+/* Quick buttons responsive */
+.quick-buttons {
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: clamp(6px, 2vw, 10px);
+}
+
+.quick-btn {
+    padding: clamp(8px, 2vw, 12px);
+    font-size: clamp(12px, 3vw, 14px);
+}
+
+/* Bottom navigation responsive */
+.bottom-nav {
+    padding: clamp(8px, 2vw, 12px);
+    max-width: min(420px, 100vw);
+}
+
+.nav-item {
+    padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
+    font-size: clamp(12px, 3vw, 14px);
+    gap: clamp(4px, 1vw, 6px);
+}
+
+/* Media Queries pour des ajustements spécifiques */
+
+/* Très petits écrans (< 360px) */
+@media (max-width: 359px) {
+    :root {
+        --calendar-gap: 2px;
+    }
+    
+    .calendar-day {
+        min-height: 40px;
+        padding: 2px;
+    }
+    
+    .day-number {
+        font-size: 11px;
+    }
+    
+    .day-hours {
+        font-size: 8px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quick-buttons {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Petits écrans en mode portrait (360px - 480px) */
 @media (max-width: 480px) {
     .app {
         max-width: 100%;
     }
     
-    header {
-        padding: 25px 15px 20px;
+    .modal-actions {
+        flex-direction: column;
+        gap: clamp(6px, 2vw, 8px);
     }
     
-    .calendar-container {
-        padding: 15px;
+    .header-top {
+        top: clamp(10px, 3vw, 20px);
+        right: clamp(10px, 3vw, 20px);
+        gap: clamp(6px, 2vw, 10px);
     }
     
+    .theme-toggle {
+        font-size: clamp(20px, 5vw, 24px);
+        padding: clamp(6px, 2vw, 8px);
+    }
+    
+    .language-selector {
+        padding: clamp(4px, 1.5vw, 6px) clamp(6px, 2vw, 10px);
+        font-size: clamp(12px, 3vw, 14px);
+    }
+}
+
+/* Écrans moyens en mode portrait (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
     .calendar {
-        gap: 6px;
-    }
-    
-    .calendar-day {
-        min-height: 60px;
-        padding: 8px 4px;
-    }
-    
-    .day-number {
-        font-size: 14px;
-    }
-    
-    .day-hours {
-        font-size: 10px;
-    }
-    
-    .stats {
-        margin: 15px;
-        padding: 20px 15px;
+        max-height: calc(100vh - 280px);
+        max-height: calc(100dvh - 280px);
     }
     
     .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Écrans en mode paysage (hauteur < 600px) */
+@media (max-height: 599px) {
+    header {
+        padding: 15px var(--container-padding) 10px;
+    }
+    
+    header h1 {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+    
+    .total-hours {
+        padding: 8px 15px;
+        font-size: 14px;
+    }
+    
+    .calendar-container {
+        padding: 10px var(--container-padding);
+    }
+    
+    .calendar {
+        max-height: calc(100vh - 200px);
+        max-height: calc(100dvh - 200px);
+    }
+    
+    .calendar-day {
+        min-height: 35px;
+        max-height: 45px;
+    }
+    
+    .stats {
+        padding: 10px var(--container-padding);
+    }
+    
+    .modal {
+        align-items: flex-start;
+        padding-top: 5px;
     }
     
     .modal-content {
-        padding: 25px 20px;
-        width: 95%;
+        max-height: 90vh;
+        max-height: 90dvh;
+        margin-top: 5px;
     }
     
-    .quick-buttons {
-        grid-template-columns: repeat(2, 1fr);
+    main {
+        padding-bottom: 60px;
+    }
+    
+    .bottom-nav {
+        padding: 6px;
+    }
+    
+    .nav-item {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
+
+/* Très petite hauteur (< 500px) */
+@media (max-height: 499px) {
+    .calendar-day {
+        min-height: 30px;
+        max-height: 35px;
+    }
+    
+    .day-number {
+        font-size: 10px;
+    }
+    
+    .day-hours {
+        font-size: 8px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
         gap: 8px;
     }
     
-    .modal-actions {
-        flex-direction: column;
-        gap: 8px;
+    .stat-item {
+        padding: 8px;
+    }
+    
+    .stat-value {
+        font-size: 16px;
+        margin-bottom: 2px;
+    }
+    
+    .stat-label {
+         font-size: 9px;
+     }
+ }
+
+/* Styles pour les modes adaptatifs */
+
+/* Mode compact pour petits écrans */
+.calendar.compact-mode {
+    gap: clamp(2px, 0.5vw, 4px);
+}
+
+.calendar.compact-mode .calendar-day {
+    min-height: clamp(35px, 10vw, 50px);
+    padding: clamp(2px, 1vw, 6px);
+}
+
+.calendar.compact-mode .day-number {
+    font-size: clamp(10px, 3vw, 14px);
+}
+
+.calendar.compact-mode .day-hours {
+    font-size: clamp(8px, 2vw, 10px);
+    margin-top: 1px;
+}
+
+/* Mode minimal pour très petits écrans */
+.calendar.minimal-mode {
+    gap: 1px;
+}
+
+.calendar.minimal-mode .calendar-day {
+    min-height: 30px;
+    max-height: 35px;
+    padding: 1px;
+    border-radius: 4px;
+}
+
+.calendar.minimal-mode .day-number {
+    font-size: 9px;
+    font-weight: 500;
+}
+
+.calendar.minimal-mode .day-hours {
+    font-size: 7px;
+    margin-top: 0;
+}
+
+.calendar.minimal-mode .calendar-day.has-note::after {
+    font-size: 8px;
+    top: 1px;
+    right: 1px;
+}
+
+/* Mode écran court */
+.calendar.short-screen {
+    max-height: calc(100vh - 250px);
+    max-height: calc(100dvh - 250px);
+}
+
+.calendar.short-screen .calendar-day {
+    max-height: 40px;
+}
+
+/* Optimisations pour appareils tactiles */
+.touch-device .calendar-day {
+    min-height: 44px; /* Taille minimale recommandée pour le tactile */
+}
+
+.touch-device .month-nav button {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.touch-device .nav-item {
+    min-height: 44px;
+    padding: 12px 16px;
+}
+
+.touch-device .quick-btn {
+    min-height: 44px;
+    padding: 12px;
+}
+
+/* Variables dynamiques pour l'échelle des polices */
+:root {
+    --dynamic-font-scale: 1;
+}
+
+.calendar-day {
+    font-size: calc(var(--dynamic-font-scale) * clamp(12px, 3vw, 16px));
+}
+
+.day-number {
+    font-size: calc(var(--dynamic-font-scale) * clamp(12px, 3.5vw, 16px));
+}
+
+.day-hours {
+    font-size: calc(var(--dynamic-font-scale) * clamp(9px, 2.5vw, 11px));
+}
+
+/* Styles pour les variables CSS personnalisées */
+.calendar-day {
+    height: var(--optimal-day-size, auto);
+    font-size: var(--day-font-size, inherit);
+}
+
+.day-hours {
+    font-size: var(--hours-font-size, inherit);
+}
+
+/* Support pour les unités de viewport dynamiques */
+@supports (height: 100dvh) {
+    .app {
+        min-height: 100dvh;
+    }
+    
+    .calendar {
+        max-height: calc(100dvh - 300px);
+    }
+    
+    .modal-content {
+        max-height: 80dvh;
+    }
+}
+
+/* Amélioration de la lisibilité sur très petits écrans */
+@media (max-width: 320px) {
+    .calendar-header-day {
+        font-size: 9px;
+        padding: 6px 2px;
+    }
+    
+    .total-hours {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
+    .total-hours span {
+        font-size: 18px;
+    }
+    
+    .month-nav span {
+        font-size: 14px;
+    }
+    
+    header h1 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+}
+
+/* Optimisation pour les écrans ultra-larges */
+@media (min-width: 1200px) {
+    .app {
+        max-width: 480px;
+    }
+    
+    .calendar-day {
+        max-height: 80px;
+    }
+    
+    .day-number {
+        font-size: 18px;
+    }
+    
+    .day-hours {
+        font-size: 12px;
+    }
+}
+
+/* Gestion des préférences utilisateur */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .calendar-day {
+        animation: none;
+    }
+}
+
+/* Mode sombre adaptatif */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --primary: #818cf8;
+        --primary-dark: #6366f1;
+        --secondary: #9333ea;
+        --accent: #c084fc;
+        --success: #34d399;
+        --warning: #fbbf24;
+        --danger: #f87171;
+        --light: #1f2937;
+        --dark: #f3f4f6;
+        --gray: #9ca3af;
+        --white: #111827;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
     }
 }
 
@@ -1040,6 +1539,10 @@ main {
 ::-webkit-scrollbar-thumb {
     background: var(--primary);
     border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
 }
 
 ::-webkit-scrollbar-thumb:hover {
