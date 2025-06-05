@@ -334,7 +334,7 @@ class HoursTracker {
         // Add export functionality
         section.querySelector('#exportJSON').addEventListener('click', () => this.exportData('json'));
         section.querySelector('#exportCSV').addEventListener('click', () => this.exportData('csv'));
-
+        section.querySelector('#exportPDF').addEventListener('click', () => this.exportData('pdf'));
         document.querySelector('main').appendChild(section);
         return section;
     }
@@ -346,6 +346,7 @@ class HoursTracker {
             <div class="export-options">
                 <button id="exportJSON" class="export-btn">📥 ${this.t('exportJSON')}</button>
                 <button id="exportCSV" class="export-btn">📊 ${this.t('exportCSV')}</button>
+                <button id="exportPDF" class="export-btn">📝 Exporter en PDF</button>
             </div>
         `;
     }
@@ -358,6 +359,7 @@ class HoursTracker {
             // Re-bind events
             section.querySelector('#exportJSON').addEventListener('click', () => this.exportData('json'));
             section.querySelector('#exportCSV').addEventListener('click', () => this.exportData('csv'));
+            section.querySelector('#exportPDF').addEventListener('click', () => this.exportData('pdf'));
         }
     }
 
@@ -373,7 +375,7 @@ class HoursTracker {
             content = JSON.stringify(data, null, 2);
             filename = 'heures-travail.json';
             type = 'application/json';
-        } else {
+        } else if (format === 'csv') {
             // CSV format
             const lines = ['Date,Heures,Note'];
             Object.keys(this.data).sort().forEach(date => {
@@ -384,8 +386,26 @@ class HoursTracker {
             content = lines.join('\n');
             filename = 'heures-travail.csv';
             type = 'text/csv';
+        } else if (format === 'pdf') {
+            // Génération PDF simple (texte brut)
+            const lines = ['Heures de travail', '', 'Date\tHeures\tNote'];
+            Object.keys(this.data).sort().forEach(date => {
+                const hours = this.data[date];
+                const note = this.notes[date] || '';
+                lines.push(`${date}\t${hours}\t${note.replace(/\n/g, ' ')}`);
+            });
+            const pdfContent = lines.join('\n');
+            const blob = new Blob([pdfContent], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'heures-travail.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            return;
         }
-
         const blob = new Blob([content], { type });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -529,32 +549,23 @@ class HoursTracker {
         const calendarStartDate = new Date(firstDayOfMonth);
         calendarStartDate.setDate(firstDayOfMonth.getDate() - firstDayWeekday);
         
-        // Debug: vérifier que nous commençons bien un lundi
-        console.log('Calendrier pour:', year, month + 1);
-        console.log('Premier jour du mois:', firstDayOfMonth.toDateString());
-        console.log('Date de début du calendrier:', calendarStartDate.toDateString());
-        console.log('Jour de la semaine de début:', calendarStartDate.getDay(), '(doit être 1 pour lundi)');
+        // 1. Premier jour du mois
+        const firstDay = new Date(year, month, 1);
 
-        // Générer exactement 42 jours (6 semaines complètes)
-        // Cela garantit que tous les jours sont affichés, même si le mois
-        // commence un samedi ou dimanche
-        for (let dayIndex = 0; dayIndex < 42; dayIndex++) {
-            // Créer une nouvelle date pour chaque jour
-            const currentDate = new Date(calendarStartDate);
-            currentDate.setDate(calendarStartDate.getDate() + dayIndex);
-            
-            // Créer l'élément DOM pour ce jour
-            const dayElement = this.createDayElement(currentDate, month);
+        // 2. Calculer l'offset pour toujours commencer au LUNDI précédent ou du 1er
+        // JS: getDay() -> 0 = Dim, 1 = Lun, ..., 6 = Sam
+        // Si 1er du mois = Dimanche, recule de 6 jours ; sinon recule de (getDay() - 1)
+        let startOffset = firstDay.getDay() === 0 ? -6 : 1 - firstDay.getDay();
+        const startDate = new Date(year, month, 1 + startOffset);
+
+        // 3. Générer 42 jours à partir de ce lundi
+        for (let i = 0; i < 42; i++) {
+            // Création robuste : année/mois/jour + i
+            const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+            const dayElement = this.createDayElement(date, month);
             calendar.appendChild(dayElement);
         }
-
-        // Vérifier que nous avons bien 42 éléments
-        const generatedDays = calendar.children.length;
-        console.log('Jours générés:', generatedDays);
-        
-        if (generatedDays !== 42) {
-            console.warn('Attention: nombre de jours incorrect!', generatedDays);
-        }
+        // => Ce code garantit l'affichage de TOUS les jours du mois dans la grille, peu importe le jour de début !
 
         // Animation d'apparition du calendrier
         this.animateCalendar();
@@ -853,18 +864,9 @@ class HoursTracker {
     }
 
     setupPWA() {
-        // Créer le bouton d'installation
-        const installButton = document.createElement('button');
-        installButton.id = 'installPWA';
-        installButton.className = 'install-button';
-        installButton.innerHTML = '📱 Installer l\'application';
-        installButton.style.display = 'none';
-        
-        // Vérifier si l'élément header existe avant d'ajouter le bouton
-        const header = document.querySelector('header');
-        if (header) {
-            header.appendChild(installButton);
-        }
+        // Utiliser le bouton d'installation existant dans le HTML
+        const installButton = document.getElementById('installPWA');
+        if (!installButton) return;
 
         // Gérer l'événement d'installation
         window.addEventListener('beforeinstallprompt', (e) => {
