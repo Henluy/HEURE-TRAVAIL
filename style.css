@@ -353,13 +353,15 @@ header h1 {
     color: #cbd5e0;
     background: #f7fafc;
     border-color: #e2e8f0;
-    cursor: default;
+    cursor: pointer;
+    opacity: 0.6;
 }
 
 .calendar-day.other-month:hover {
-    transform: none;
-    box-shadow: none;
-    border-color: #e2e8f0;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #cbd5e0;
+    opacity: 0.8;
 }
 
 .calendar-day.today {
@@ -1539,10 +1541,6 @@ main {
 ::-webkit-scrollbar-thumb {
     background: var(--primary);
     border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-dark);
 }
 
 ::-webkit-scrollbar-thumb:hover {
