@@ -517,22 +517,43 @@ class HoursTracker {
         const year = this.currentDate.getFullYear();
         const month = this.currentDate.getMonth();
 
-        // Premier jour du mois
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
+        // Calculer le premier jour du mois courant
+        const firstDayOfMonth = new Date(year, month, 1);
         
-        // Commencer par lundi (1) au lieu de dimanche (0)
-        const startDate = new Date(firstDay);
-        const dayOfWeek = (firstDay.getDay() + 6) % 7; // Convertir pour commencer lundi
-        startDate.setDate(startDate.getDate() - dayOfWeek);
+        // Calculer le lundi de la première semaine qui contient le 1er du mois
+        // getDay() retourne 0=dimanche, 1=lundi, ..., 6=samedi
+        // On convertit pour que lundi = 0, mardi = 1, ..., dimanche = 6
+        const firstDayWeekday = (firstDayOfMonth.getDay() + 6) % 7;
+        
+        // Calculer la date de début du calendrier (toujours un lundi)
+        const calendarStartDate = new Date(firstDayOfMonth);
+        calendarStartDate.setDate(firstDayOfMonth.getDate() - firstDayWeekday);
+        
+        // Debug: vérifier que nous commençons bien un lundi
+        console.log('Calendrier pour:', year, month + 1);
+        console.log('Premier jour du mois:', firstDayOfMonth.toDateString());
+        console.log('Date de début du calendrier:', calendarStartDate.toDateString());
+        console.log('Jour de la semaine de début:', calendarStartDate.getDay(), '(doit être 1 pour lundi)');
 
-        // Générer 42 jours (6 semaines)
-        for (let i = 0; i < 42; i++) {
-            const date = new Date(startDate);
-            date.setDate(startDate.getDate() + i);
+        // Générer exactement 42 jours (6 semaines complètes)
+        // Cela garantit que tous les jours sont affichés, même si le mois
+        // commence un samedi ou dimanche
+        for (let dayIndex = 0; dayIndex < 42; dayIndex++) {
+            // Créer une nouvelle date pour chaque jour
+            const currentDate = new Date(calendarStartDate);
+            currentDate.setDate(calendarStartDate.getDate() + dayIndex);
             
-            const dayElement = this.createDayElement(date, month);
+            // Créer l'élément DOM pour ce jour
+            const dayElement = this.createDayElement(currentDate, month);
             calendar.appendChild(dayElement);
+        }
+
+        // Vérifier que nous avons bien 42 éléments
+        const generatedDays = calendar.children.length;
+        console.log('Jours générés:', generatedDays);
+        
+        if (generatedDays !== 42) {
+            console.warn('Attention: nombre de jours incorrect!', generatedDays);
         }
 
         // Animation d'apparition du calendrier
