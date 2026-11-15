@@ -1,7 +1,7 @@
 // Service Worker — Suivi Heures Pro
 // Chemins RELATIFS : le site est servi depuis /HEURE-TRAVAIL/ sur GitHub Pages.
 // Changer CACHE_NAME à chaque mise en ligne pour forcer la mise à jour.
-const CACHE_NAME = 'hours-tracker-v4';
+const CACHE_NAME = 'hours-tracker-v5';
 const urlsToCache = [
     './',
     './index.html',
@@ -47,7 +47,14 @@ self.addEventListener('fetch', event => {
         const cache = await caches.open(CACHE_NAME);
         try {
             // Fichiers du site : toujours revalider auprès du serveur (304 si inchangé)
-            const response = await fetch(sameOrigin ? new Request(request, { cache: 'no-cache' }) : request);
+            // (pour une navigation, on repart de l'URL : certains navigateurs refusent
+            //  de recopier une requête « navigate » avec des options)
+            const fresh = !sameOrigin
+                ? request
+                : request.mode === 'navigate'
+                    ? new Request(request.url, { cache: 'no-cache', credentials: 'same-origin' })
+                    : new Request(request, { cache: 'no-cache' });
+            const response = await fetch(fresh);
             if (response && (response.ok || response.type === 'opaque')) {
                 cache.put(request, response.clone()).catch(() => {});
             }
