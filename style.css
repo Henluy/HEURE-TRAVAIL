@@ -1564,3 +1564,86 @@ main {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
 }
+
+/* ===== Corrections (2026-11-15) ===== */
+
+/* Barre du haut dans le flux : le thème et la langue ne recouvrent plus le titre */
+.header-top {
+    position: relative;
+    top: auto;
+    right: auto;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+    z-index: 3;
+}
+
+@media (max-width: 480px) {
+    .header-top {
+        top: auto;
+        right: auto;
+    }
+}
+
+.header-top .install-button {
+    position: static;
+    margin-right: auto;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #fff;
+}
+
+.theme-toggle {
+    line-height: 1;
+}
+
+.language-selector {
+    color: #fff;
+}
+
+/* Aujourd'hui : toujours lisible, même un samedi/dimanche (la règle week-end l'écrasait) */
+.calendar-day.today,
+.calendar-day.today.weekend,
+.calendar-day.today.has-hours {
+    background: var(--primary);
+    color: #fff;
+    border: 3px solid var(--warning);
+    font-weight: 600;
+}
+
+/* Zone sensible (réinitialisation) dans l'onglet Export */
+.danger-zone {
+    max-width: 300px;
+    margin: 40px auto 0;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 107, 107, 0.4);
+    text-align: center;
+}
+
+.danger-zone h3 {
+    font-size: 14px;
+    color: var(--danger);
+    margin-bottom: 10px;
+}
+
+.danger-zone .reset-button {
+    margin-top: 0;
+}
+
+/* Barre du bas : les 3 onglets restent sur une seule ligne */
+.bottom-nav {
+    flex-wrap: nowrap;
+    padding-bottom: calc(clamp(8px, 2vw, 12px) + env(safe-area-inset-bottom, 0px));
+}
+
+.nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+/* Mode sombre : le bandeau violet garde un texte blanc (var(--white) devient sombre) */
+header,
+.month-nav button,
+.total-hours {
+    color: #fff;
+}

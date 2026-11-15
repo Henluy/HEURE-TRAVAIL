@@ -70,7 +70,16 @@ class HoursTracker {
                 // Validation en temps réel
                 invalidFormat: 'Format invalide (utilisez des chiffres et un point/virgule)',
                 tooManyDecimals: 'Trop de points décimaux',
-                realTimeTotal: 'Total en temps réel'
+                realTimeTotal: 'Total en temps réel',
+                exportPDF: 'Exporter en PDF',
+                pdfTitle: 'Heures de travail',
+                pdfGenerated: 'Généré le',
+                colDate: 'Date',
+                colHours: 'Heures',
+                colNote: 'Note',
+                total: 'Total',
+                noData: 'Aucune heure enregistrée',
+                dangerZone: 'Zone sensible'
             },
             en: {
                 // Main interface
@@ -127,7 +136,16 @@ class HoursTracker {
                 // Real-time validation
                 invalidFormat: 'Invalid format (use digits and a dot/comma)',
                 tooManyDecimals: 'Too many decimal points',
-                realTimeTotal: 'Real-time total'
+                realTimeTotal: 'Real-time total',
+                exportPDF: 'Export as PDF',
+                pdfTitle: 'Working hours',
+                pdfGenerated: 'Generated on',
+                colDate: 'Date',
+                colHours: 'Hours',
+                colNote: 'Note',
+                total: 'Total',
+                noData: 'No hours recorded',
+                dangerZone: 'Danger zone'
             },
             it: {
                 // Interfaccia principale
@@ -184,7 +202,16 @@ class HoursTracker {
                 // Validazione in tempo reale
                 invalidFormat: 'Formato non valido (usa cifre e un punto/virgola)',
                 tooManyDecimals: 'Troppi punti decimali',
-                realTimeTotal: 'Totale in tempo reale'
+                realTimeTotal: 'Totale in tempo reale',
+                exportPDF: 'Esporta in PDF',
+                pdfTitle: 'Ore di lavoro',
+                pdfGenerated: 'Generato il',
+                colDate: 'Data',
+                colHours: 'Ore',
+                colNote: 'Nota',
+                total: 'Totale',
+                noData: 'Nessuna ora registrata',
+                dangerZone: 'Zona pericolosa'
             }
         };
     }
@@ -242,7 +269,14 @@ class HoursTracker {
         if (resetBtn) {
             resetBtn.innerHTML = `🗑️ ${this.t('resetApp')}`;
         }
-        
+
+        // Le sélecteur doit afficher la langue réellement utilisée
+        const langSelector = document.getElementById('languageSelector');
+        if (langSelector) {
+            langSelector.value = this.currentLanguage;
+        }
+        document.documentElement.lang = this.currentLanguage;
+
         // Mettre à jour le mois affiché
         this.updateMonthDisplay();
         
@@ -251,10 +285,8 @@ class HoursTracker {
             this.updateDetailedStats();
         }
         
-        // Mettre à jour la section export si visible
-        if (this.currentView === 'export') {
-            this.updateExportSection();
-        }
+        // Mettre à jour la section export (même cachée, sinon elle reste dans l'ancienne langue)
+        this.updateExportSection();
         
         // Validation finale du total mensuel
         this.validateMonthlyTotal();
@@ -330,25 +362,32 @@ class HoursTracker {
         const section = document.createElement('div');
         section.className = 'export-section';
         this.updateExportSectionContent(section);
-
-        // Add export functionality
-        section.querySelector('#exportJSON').addEventListener('click', () => this.exportData('json'));
-        section.querySelector('#exportCSV').addEventListener('click', () => this.exportData('csv'));
-        section.querySelector('#exportPDF').addEventListener('click', () => this.exportData('pdf'));
         document.querySelector('main').appendChild(section);
         return section;
     }
 
-    // Mettre à jour le contenu de la section export
+    // Mettre à jour le contenu de la section export (et rebrancher les boutons)
     updateExportSectionContent(section) {
         section.innerHTML = `
             <h2>${this.t('exportTitle')}</h2>
             <div class="export-options">
-                <button id="exportJSON" class="export-btn">📥 ${this.t('exportJSON')}</button>
-                <button id="exportCSV" class="export-btn">📊 ${this.t('exportCSV')}</button>
-                <button id="exportPDF" class="export-btn">📝 Exporter en PDF</button>
+                <button id="exportJSON" class="export-btn" type="button">📥 ${this.t('exportJSON')}</button>
+                <button id="exportCSV" class="export-btn" type="button">📊 ${this.t('exportCSV')}</button>
+                <button id="exportPDF" class="export-btn" type="button">📝 ${this.t('exportPDF')}</button>
+            </div>
+            <div class="danger-zone">
+                <h3>${this.t('dangerZone')}</h3>
             </div>
         `;
+        section.querySelector('#exportJSON').addEventListener('click', () => this.exportData('json'));
+        section.querySelector('#exportCSV').addEventListener('click', () => this.exportData('csv'));
+        section.querySelector('#exportPDF').addEventListener('click', () => this.exportData('pdf'));
+
+        // Le bouton de réinitialisation vit dans la zone sensible de l'export
+        const resetBtn = document.getElementById('resetApp');
+        if (resetBtn) {
+            section.querySelector('.danger-zone').appendChild(resetBtn);
+        }
     }
 
     // Mettre à jour la section export
@@ -356,56 +395,48 @@ class HoursTracker {
         const section = document.querySelector('.export-section');
         if (section) {
             this.updateExportSectionContent(section);
-            // Re-bind events
-            section.querySelector('#exportJSON').addEventListener('click', () => this.exportData('json'));
-            section.querySelector('#exportCSV').addEventListener('click', () => this.exportData('csv'));
-            section.querySelector('#exportPDF').addEventListener('click', () => this.exportData('pdf'));
         }
     }
 
-    exportData(format) {
-        const data = {
-            hours: this.data,
-            notes: this.notes
-        };
+    // Les heures au format de la langue (virgule décimale en FR/IT)
+    formatHoursLocale(hours) {
+        const text = this.formatHours(hours);
+        return this.currentLanguage === 'en' ? text : text.replace('.', ',');
+    }
 
+    // Date AAAA-MM-JJ -> JJ/MM/AAAA
+    formatDateKey(dateKey) {
+        const [y, m, d] = dateKey.split('-');
+        return `${d}/${m}/${y}`;
+    }
+
+    exportData(format) {
+        const dates = Object.keys(this.data).sort();
         let content, filename, type;
 
         if (format === 'json') {
-            content = JSON.stringify(data, null, 2);
+            content = JSON.stringify({ hours: this.data, notes: this.notes }, null, 2);
             filename = 'heures-travail.json';
             type = 'application/json';
         } else if (format === 'csv') {
-            // CSV format
-            const lines = ['Date,Heures,Note'];
-            Object.keys(this.data).sort().forEach(date => {
-                const hours = this.data[date];
-                const note = this.notes[date] || '';
-                lines.push(`${date},${hours},"${note.replace(/"/g, '""')}"`);
+            // Point-virgule + BOM UTF-8 : s'ouvre correctement dans Excel (FR/IT)
+            const sep = this.currentLanguage === 'en' ? ',' : ';';
+            const quote = value => `"${String(value).replace(/"/g, '""')}"`;
+            const lines = [[this.t('colDate'), this.t('colHours'), this.t('colNote')].map(quote).join(sep)];
+            dates.forEach(date => {
+                lines.push([date, this.formatHoursLocale(this.data[date]), this.notes[date] || ''].map(quote).join(sep));
             });
-            content = lines.join('\n');
+            content = '﻿' + lines.join('\r\n');
             filename = 'heures-travail.csv';
-            type = 'text/csv';
+            type = 'text/csv;charset=utf-8';
         } else if (format === 'pdf') {
-            // Génération PDF simple (texte brut)
-            const lines = ['Heures de travail', '', 'Date\tHeures\tNote'];
-            Object.keys(this.data).sort().forEach(date => {
-                const hours = this.data[date];
-                const note = this.notes[date] || '';
-                lines.push(`${date}\t${hours}\t${note.replace(/\n/g, ' ')}`);
-            });
-            const pdfContent = lines.join('\n');
-            const blob = new Blob([pdfContent], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'heures-travail.pdf';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            content = this.buildPdf(dates);
+            filename = 'heures-travail.pdf';
+            type = 'application/pdf';
+        } else {
             return;
         }
+
         const blob = new Blob([content], { type });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -414,7 +445,130 @@ class HoursTracker {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        // Laisser le temps au téléchargement de démarrer (Safari/iOS)
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Construit un vrai fichier PDF (A4, Helvetica) regroupé par mois
+    buildPdf(dates) {
+        const toPdfText = (value) => {
+            const map = { '’': "'", '‘': "'", '“': '"', '”': '"', '–': '-', '—': '-', '…': '...', '€': '\x80' };
+            let out = '';
+            for (const ch of String(value)) {
+                const code = ch.codePointAt(0);
+                if (map[ch]) out += map[ch];
+                else if (code === 9 || code === 10 || code === 13) out += ' ';
+                else if (code >= 32 && code < 127) out += ch;
+                else if (code >= 160 && code <= 255) out += ch;
+                else out += '?';
+            }
+            return out.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+        };
+        const wrap = (text, max) => {
+            const words = String(text).replace(/\s+/g, ' ').trim().split(' ');
+            const lines = [];
+            let line = '';
+            words.forEach(word => {
+                if ((line + ' ' + word).trim().length > max && line) {
+                    lines.push(line);
+                    line = word;
+                } else {
+                    line = (line + ' ' + word).trim();
+                }
+            });
+            if (line) lines.push(line);
+            return lines.length ? lines : [''];
+        };
+
+        // Lignes à écrire : { cells: [[x, texte]], size, bold, gap }
+        const rows = [];
+        const now = new Date();
+        rows.push({ cells: [[50, this.t('pdfTitle')]], size: 18, bold: true, gap: 26 });
+        rows.push({ cells: [[50, `${this.t('pdfGenerated')} ${this.formatDateKey(this.getDateKey(now))}`]], size: 10, gap: 24 });
+
+        if (dates.length === 0) {
+            rows.push({ cells: [[50, this.t('noData')]], size: 11, gap: 16 });
+        }
+
+        let grandTotal = 0;
+        const byMonth = {};
+        dates.forEach(date => {
+            const month = date.slice(0, 7);
+            (byMonth[month] = byMonth[month] || []).push(date);
+        });
+        Object.keys(byMonth).forEach(month => {
+            const [y, m] = month.split('-').map(Number);
+            let monthTotal = 0;
+            rows.push({ cells: [[50, `${this.t('months')[m - 1]} ${y}`]], size: 13, bold: true, gap: 20, keepWithNext: 2 });
+            rows.push({ cells: [[50, this.t('colDate')], [150, this.t('colHours')], [220, this.t('colNote')]], size: 10, bold: true, gap: 15 });
+            byMonth[month].forEach(date => {
+                const hours = Number(this.data[date]) || 0;
+                monthTotal += hours;
+                const noteLines = wrap(this.notes[date] || '', 60);
+                noteLines.forEach((noteLine, i) => {
+                    const cells = i === 0
+                        ? [[50, this.formatDateKey(date)], [150, `${this.formatHoursLocale(hours)} h`], [220, noteLine]]
+                        : [[220, noteLine]];
+                    rows.push({ cells, size: 10, gap: 14 });
+                });
+            });
+            grandTotal += monthTotal;
+            rows.push({ cells: [[50, this.t('total')], [150, `${this.formatHoursLocale(monthTotal)} h`]], size: 10, bold: true, gap: 26 });
+        });
+        if (Object.keys(byMonth).length > 1) {
+            rows.push({ cells: [[50, this.t('total')], [150, `${this.formatHoursLocale(grandTotal)} h`]], size: 12, bold: true, gap: 18 });
+        }
+
+        // Mise en page sur plusieurs pages A4
+        const pages = [];
+        let ops = [];
+        let y = 800;
+        rows.forEach((row, index) => {
+            const needed = row.gap + (row.keepWithNext ? 40 : 0);
+            if (y - needed < 50 && ops.length) {
+                pages.push(ops.join('\n'));
+                ops = [];
+                y = 800;
+            }
+            row.cells.forEach(([x, text]) => {
+                ops.push(`BT /${row.bold ? 'F2' : 'F1'} ${row.size} Tf ${x} ${y} Td (${toPdfText(text)}) Tj ET`);
+            });
+            y -= row.gap;
+        });
+        pages.push(ops.join('\n'));
+
+        // Assemblage des objets PDF
+        const objects = [];
+        objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+        objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+        objects[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+        const kids = [];
+        pages.forEach((stream, i) => {
+            const pageId = 5 + i * 2;
+            const contentId = pageId + 1;
+            kids.push(`${pageId} 0 R`);
+            objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`;
+            objects[contentId] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+        });
+        objects[2] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pages.length} >>`;
+
+        let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+        const offsets = [];
+        for (let id = 1; id < objects.length; id++) {
+            offsets[id] = pdf.length;
+            pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+        }
+        const xref = pdf.length;
+        pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+        for (let id = 1; id < objects.length; id++) {
+            pdf += `${String(offsets[id]).padStart(10, '0')} 00000 n \n`;
+        }
+        pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+
+        // Chaque caractère = un octet (Latin-1 / WinAnsi)
+        const bytes = new Uint8Array(pdf.length);
+        for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
+        return bytes;
     }
 
     applyTheme() {
@@ -512,7 +666,10 @@ class HoursTracker {
         // Boutons rapides
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.getElementById('hoursInput').value = btn.dataset.hours;
+                const input = document.getElementById('hoursInput');
+                input.value = btn.dataset.hours;
+                this.validateHoursInput(input);
+                this.updateRealTimeTotal();
                 this.animateButton(btn);
             });
         });
@@ -524,7 +681,7 @@ class HoursTracker {
 
         // Gestion des touches clavier
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && document.getElementById('modal').style.display === 'block') {
+            if (e.key === 'Escape' && document.getElementById('modal').classList.contains('active')) {
                 this.closeModal();
             }
         });
@@ -611,6 +768,11 @@ class HoursTracker {
             dayDiv.classList.add('has-hours');
         }
 
+        if (this.notes[dateKey]) {
+            dayDiv.classList.add('has-note');
+            dayDiv.title = this.notes[dateKey];
+        }
+
         dayDiv.innerHTML = `
             <div class="day-number">${date.getDate()}</div>
             ${hours > 0 ? `<div class="day-hours">${this.formatHours(hours)}h</div>` : ''}
@@ -624,6 +786,7 @@ class HoursTracker {
     }
 
     openModal(date) {
+        clearTimeout(this.closeModalTimer);
         this.selectedDate = date;
         const dateKey = this.getDateKey(date);
         const currentHours = this.data[dateKey] || '';
@@ -644,8 +807,12 @@ class HoursTracker {
         // Réinitialiser la validation visuelle
         this.resetInputValidation(hoursInput);
         
+        // Total en temps réel dès l'ouverture
+        this.updateRealTimeTotal();
+
         // Réinitialiser les styles et afficher la modale
         modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
         
         // Animation d'ouverture
         requestAnimationFrame(() => {
@@ -687,8 +854,11 @@ class HoursTracker {
         this.resetInputValidation(hoursInput);
         
         modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
         
-        setTimeout(() => {
+        clearTimeout(this.closeModalTimer);
+        this.closeModalTimer = setTimeout(() => {
+            if (modal.classList.contains('active')) return; // rouverte entre-temps
             modal.style.display = 'none';
             this.selectedDate = null;
             
@@ -705,9 +875,7 @@ class HoursTracker {
     }
 
     saveHours() {
-        console.log('🔧 DEBUG: saveHours appelée');
         if (!this.selectedDate) {
-            console.log('❌ DEBUG: Aucune date sélectionnée');
             return;
         }
         
@@ -716,10 +884,6 @@ class HoursTracker {
         const inputValue = hoursInput.value.trim().replace(',', '.');
         const noteValue = noteInput.value.trim();
         const dateKey = this.getDateKey(this.selectedDate);
-        
-        console.log('🔧 DEBUG: Date sélectionnée:', this.selectedDate);
-        console.log('🔧 DEBUG: Clé de date:', dateKey);
-        console.log('🔧 DEBUG: Valeur saisie:', inputValue);
         
         // Validation des heures avec messages multilingues
         if (inputValue === '') {
@@ -748,10 +912,8 @@ class HoursTracker {
         }
         
         // Sauvegarder les heures et la note
-        console.log('🔧 DEBUG: Heures validées:', hours);
         if (hours > 0) {
             this.data[dateKey] = hours;
-            console.log('🔧 DEBUG: Données avant sauvegarde:', this.data);
             if (noteValue) {
                 this.notes[dateKey] = noteValue;
             } else {
@@ -765,10 +927,8 @@ class HoursTracker {
         }
         
         // Sauvegarder et mettre à jour l'interface - Correction du total mensuel
-        console.log('🔧 DEBUG: Appel saveData()');
         this.saveData();
         this.saveNotes();
-        console.log('🔧 DEBUG: Données après sauvegarde localStorage:', localStorage.getItem('hoursData'));
         this.renderCalendar();
         this.updateStats(); // Recalculer les statistiques après sauvegarde
         this.forceUpdateMonthTotal(); // Forcer la mise à jour du total affiché
@@ -799,28 +959,10 @@ class HoursTracker {
     updateStats() {
         const stats = this.getMonthlyStats();
         
-        // Animation des chiffres
+        // Animation des chiffres (la valeur finale exacte est toujours écrite à la fin)
         this.animateNumber('monthTotal', stats.totalHours);
         this.animateNumber('workDays', stats.workDays);
         this.animateNumber('avgHours', stats.avgHours);
-        
-        // Mettre à jour les éléments avec vérification
-        const monthTotalElement = document.getElementById('monthTotal');
-        const workDaysElement = document.getElementById('workDays');
-        const avgHoursElement = document.getElementById('avgHours');
-        
-        if (monthTotalElement) {
-            monthTotalElement.textContent = this.formatHours(stats.totalHours);
-        }
-        if (workDaysElement) {
-            workDaysElement.textContent = stats.workDays;
-        }
-        if (avgHoursElement) {
-            avgHoursElement.textContent = this.formatHours(stats.avgHours);
-        }
-        
-        // Validation automatique après mise à jour
-        setTimeout(() => this.validateMonthlyTotal(), 100);
     }
 
     updateDetailedStats() {
@@ -872,7 +1014,7 @@ class HoursTracker {
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
-            installButton.style.display = 'block';
+            installButton.style.display = 'inline-block';
         });
 
         installButton.addEventListener('click', async () => {
@@ -901,19 +1043,22 @@ class HoursTracker {
         const resetButton = document.createElement('button');
         resetButton.id = 'resetApp';
         resetButton.className = 'reset-button';
-        resetButton.innerHTML = '🗑️ Réinitialiser l\'application';
-        
-        // Vérifier si l'élément bottom-nav existe avant d'ajouter le bouton
-        const bottomNav = document.querySelector('.bottom-nav');
-        if (bottomNav) {
-            bottomNav.appendChild(resetButton);
+        resetButton.type = 'button';
+        resetButton.innerHTML = `🗑️ ${this.t('resetApp')}`;
+
+        // Placé dans la zone sensible de l'onglet Export (plus dans la barre du bas,
+        // où il cachait le bas de l'écran et risquait un clic par erreur)
+        const dangerZone = document.querySelector('.export-section .danger-zone');
+        if (dangerZone) {
+            dangerZone.appendChild(resetButton);
         }
 
         resetButton.addEventListener('click', () => {
             if (confirm(`⚠️ ${this.t('resetConfirm')}`)) {
                 if (confirm(`⚠️ ${this.t('resetFinalConfirm')}`)) {
-                    // Effacer toutes les données
-                    localStorage.clear();
+                    // Effacer uniquement les données de CETTE app : le localStorage est
+                    // partagé par tous les sites henluy.github.io/*
+                    ['hoursData', 'dayNotes', 'theme', 'language'].forEach(key => localStorage.removeItem(key));
                     this.data = {};
                     this.notes = {};
                     this.theme = 'light';
@@ -990,26 +1135,37 @@ class HoursTracker {
     }
 
     animateNumber(elementId, targetValue) {
+        this.numberTimers = this.numberTimers || {};
+        clearInterval(this.numberTimers[elementId]);
+        delete this.numberTimers[elementId];
+
         const element = document.getElementById(elementId);
         if (!element) return;
-        
-        const currentValue = parseFloat(element.textContent) || 0;
-        const increment = (targetValue - currentValue) / 20;
-        let current = currentValue;
-        
-        const timer = setInterval(() => {
-            current += increment;
-            if ((increment > 0 && current >= targetValue) || 
-                (increment < 0 && current <= targetValue)) {
-                current = targetValue;
-                clearInterval(timer);
+
+        const format = (value) => (elementId === 'avgHours' || elementId === 'monthTotal')
+            ? this.formatHours(value)
+            : String(Math.round(value));
+
+        const startValue = parseFloat(String(element.textContent).replace(',', '.')) || 0;
+        if (startValue === targetValue || !Number.isFinite(startValue)) {
+            element.textContent = format(targetValue);
+            return;
+        }
+
+        const steps = 20;
+        let step = 0;
+        this.numberTimers[elementId] = setInterval(() => {
+            step++;
+            // L'élément peut avoir été recréé (changement de langue, vue stats)
+            const current = document.getElementById(elementId);
+            if (step >= steps || !current) {
+                clearInterval(this.numberTimers[elementId]);
+                delete this.numberTimers[elementId];
+                if (current) current.textContent = format(targetValue);
+                return;
             }
-            
-            if (elementId === 'avgHours' || elementId === 'monthTotal') {
-                element.textContent = this.formatHours(current);
-            } else {
-                element.textContent = Math.round(current);
-            }
+            const value = startValue + (targetValue - startValue) * (step / steps);
+            current.textContent = format(Math.round(value * 100) / 100);
         }, 50);
     }
 
@@ -1071,13 +1227,21 @@ class HoursTracker {
 
     // Fonctions de données
     loadData() {
-        const saved = localStorage.getItem('hoursData');
-        return saved ? JSON.parse(saved) : {};
+        return this.loadJSON('hoursData');
     }
 
     loadNotes() {
-        const saved = localStorage.getItem('dayNotes');
-        return saved ? JSON.parse(saved) : {};
+        return this.loadJSON('dayNotes');
+    }
+
+    loadJSON(key) {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+        } catch (error) {
+            console.warn(`Données illisibles pour ${key}, ignorées`, error);
+            return {};
+        }
     }
 
     saveData() {
@@ -1185,8 +1349,9 @@ class HoursTracker {
         const inputValue = hoursInput.value.replace(',', '.');
         const currentHours = parseFloat(inputValue) || 0;
         
-        // Calculer le nouveau total du mois
-        const stats = this.getMonthlyStats();
+        // Calculer le nouveau total du mois de la date choisie
+        // (on peut cliquer un jour du mois précédent/suivant)
+        const stats = this.getMonthlyStats(this.selectedDate || this.currentDate);
         let newTotal = stats.totalHours;
         
         // Si on modifie une date existante, soustraire l'ancienne valeur
@@ -1379,12 +1544,13 @@ class HoursTracker {
 
     // Nouvelle méthode de navigation entre mois avec mise à jour complète
     navigateToMonth(direction) {
-        this.currentDate.setMonth(this.currentDate.getMonth() + direction);
+        this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + direction, 1);
         this.renderCalendar();
         this.updateStats();
         this.updateMonthDisplay();
-        this.forceUpdateMonthTotal(); // Assurer la mise à jour du total
-        this.validateMonthlyTotal(); // Valider l'affichage
+        if (this.currentView === 'stats') {
+            this.updateDetailedStats();
+        }
         
         // Animation de transition pour feedback visuel
         const calendar = document.getElementById('calendar');
@@ -1397,22 +1563,21 @@ class HoursTracker {
     // Forcer la mise à jour du total mensuel affiché
     forceUpdateMonthTotal() {
         const stats = this.getMonthlyStats();
+        if (this.numberTimers) {
+            clearInterval(this.numberTimers.monthTotal);
+            delete this.numberTimers.monthTotal;
+        }
         const monthTotalElement = document.getElementById('monthTotal');
-        
         if (monthTotalElement) {
-            // Mise à jour directe sans animation pour corriger l'affichage
+            // Mise à jour directe sans animation
             monthTotalElement.textContent = this.formatHours(stats.totalHours);
-            
-            // Mettre à jour aussi le label complet si nécessaire
-            const monthTotalLabel = document.querySelector('.total-hours');
-            if (monthTotalLabel) {
-                monthTotalLabel.innerHTML = `${this.t('monthTotal')}: <span id="monthTotal">${this.formatHours(stats.totalHours)}</span>h`;
-            }
         }
     }
 
     // Test de validation pour vérifier l'affichage du total
     validateMonthlyTotal() {
+        // Pendant l'animation, la valeur affichée est intermédiaire : rien à valider
+        if (this.numberTimers && this.numberTimers.monthTotal) return;
         const stats = this.getMonthlyStats();
         const displayedTotal = document.getElementById('monthTotal')?.textContent || '0';
         const expectedTotal = this.formatHours(stats.totalHours);
@@ -1430,9 +1595,9 @@ class HoursTracker {
     }
 
     // Fonctions de statistiques avancées
-    getMonthlyStats() {
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth();
+    getMonthlyStats(refDate = this.currentDate) {
+        const year = refDate.getFullYear();
+        const month = refDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         
         let stats = {
@@ -1448,7 +1613,7 @@ class HoursTracker {
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
             const dateKey = this.getDateKey(date);
-            const hours = this.data[dateKey] || 0;
+            const hours = Number(this.data[dateKey]) || 0;
             
             if (hours > 0) {
                 stats.totalHours += hours;
